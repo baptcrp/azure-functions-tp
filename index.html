@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Site Statique Azure</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; line-height: 1.6; }
+        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; margin-top: 20px; }
+        .card { border: 1px solid #ddd; border-radius: 8px; padding: 5px; text-align: center; }
+        img { max-width: 100%; border-radius: 5px; height: auto; }
+        .controls { background: #f4f4f4; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        button { cursor: pointer; padding: 10px 15px; background: #0078d4; color: white; border: none; border-radius: 4px; }
+        button:disabled { background: #ccc; }
+    </style>
+</head>
+<body>
+    <h1>Gestionnaire d'Images Statique</h1>
+    
+    <div class="controls">
+        <h3>1. Téléverser une image</h3>
+        <input type="file" id="fileInput" accept="image/*">
+        <button id="uploadBtn" onclick="uploadFile()">Téléverser</button>
+        <p id="status"></p>
+    </div>
+
+    <div class="controls">
+        <h3>2. Galerie des miniatures</h3>
+        <button onclick="loadThumbnails()">Afficher les miniatures</button>
+        <div id="gallery" class="gallery"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = "func-devoir-gtf5cqc3egfygwhd.francecentral-01.azurewebsites.net/api";
+
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const status = document.getElementById('status');
+            const btn = document.getElementById('uploadBtn');
+
+            if (!fileInput.files[0]) {
+                alert("Sélectionnez un fichier !");
+                return;
+            }
+
+            btn.disabled = true;
+            status.innerText = "Téléversement en cours...";
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/upload_image`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    status.innerText = "Succès ! L'image est en cours de redimensionnement...";
+                    fileInput.value = "";
+                } else {
+                    status.innerText = "Erreur lors du téléversement.";
+                }
+            } catch (err) {
+                status.innerText = "Erreur de connexion à la fonction.";
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function loadThumbnails() {
+            const gallery = document.getElementById('gallery');
+            gallery.innerHTML = "Chargement...";
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/list_images`);
+                const urls = await response.json();
+
+                if (urls.length === 0) {
+                    gallery.innerHTML = "Aucune miniature trouvée.";
+                    return;
+                }
+
+                gallery.innerHTML = urls.map(url => `
+                    <div class="card">
+                        <img src="${url}" alt="Miniature">
+                    </div>
+                `).join('');
+            } catch (err) {
+                gallery.innerHTML = "Erreur lors de la récupération des images.";
+            }
+        }
+    </script>
+</body>
+</html>
